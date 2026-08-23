@@ -1,0 +1,59 @@
+{
+  "schoolName": "Gairo Secondary School",
+  "teacherName": "Mwl. Richard Lomayan",
+  "department": "Idara ya Sayansi na Fizikia (Physics Department)",
+  "teacherPin": "1234",
+  "deepseekApiKey": "",
+  "classCodes": {
+    "Form 1": "GAIRO-F1",
+    "Form 2": "GAIRO-F2",
+    "Form 3": "GAIRO-F3",
+    "Form 4": "GAIRO-F4"
+  },
+  "gradeScale": {
+    "A": {
+      "min": 75,
+      "max": 100,
+      "label": "Bora Sana (Excellent)",
+      "color": "#10b981"
+    },
+    "B": {
+      "min": 65,
+      "max": 74,
+      "label": "Vizuri Sana (Very Good)",
+      "color": "#3b82f6"
+    },
+    "C": {
+      "min": 45,
+      "max": 64,
+      "label": "Wastani / Nzuri (Good)",
+      "color": "#f59e0b"
+    },
+    "D": {
+      "min": 30,
+      "max": 44,
+      "label": "Dhaifu (Pass)",
+      "color": "#f97316"
+    },
+    "F": {
+      "min": 0,
+      "max": 29,
+      "label": "Hujafikia Kiwango (Fail)",
+      "color": "#ef4444"
+    }
+  },
+  "availableSubjects": [
+    "Physics",
+    "Basic Mathematics",
+    "Chemistry",
+    "Biology"
+  ],
+  "formLevels": [
+    "Form 1",
+    "Form 2",
+    "Form 3",
+    "Form 4",
+    "Form 5",
+    "Form 6"
+  ]
+}
