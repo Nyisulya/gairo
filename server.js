@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -9,15 +9,18 @@ import * as db from './db.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Ensure .env is always loaded from the project root directory
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8018;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Configured via environment variable (.env)
-const DEFAULT_DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || "";
+const DEFAULT_DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || "sk-534222749ca9439b9691c0a784344665";
 
 const INITIAL_SETTINGS = {
   schoolName: "Gairo Secondary School",
@@ -163,161 +166,140 @@ async function evaluateHandwrittenWorkWithDeepSeek({
 }) {
   const deepseekKey = (apiKey && apiKey.trim().length > 10)
     ? apiKey.trim()
-    : (process.env.DEEPSEEK_API_KEY || DEFAULT_DEEPSEEK_KEY || "").trim();
+    : (process.env.DEEPSEEK_API_KEY || DEFAULT_DEEPSEEK_KEY || "sk-534222749ca9439b9691c0a784344665").trim();
 
-  if (deepseekKey && deepseekKey.length > 10) {
-    try {
-      console.log(`[DeepSeek Vision] Inasahihisha kazi ya ${studentName} (${formLevel}) yenye picha ${studentPhotos?.length || 0}...`);
+  console.log(`[DeepSeek Vision] Unasahihisha kazi ya ${studentName} (${formLevel}) yenye picha ${studentPhotos?.length || 0}...`);
 
-      const promptText = `Wewe ni Mwl. Richard Lomayan, Mwalimu mzoefu wa Fizikia (Physics) katika shule ya sekondari ya Gairo Secondary School.
-Unasahihisha picha ya daftari iliyopakiwa na mwanafunzi wako ${studentName} wa ${formLevel}.
+  try {
+    const promptText = `Wewe ni Mwalimu Richard Lomayan, Mwalimu wa Fizikia (Physics) katika shule ya sekondari ya Gairo Secondary School.
+Unasahihisha picha ya daftari alilofanyia kazi mwanafunzi wako ${studentName} wa ${formLevel}.
 
 HAYA NDIYO MASWALI YA MTIHANI:
 ${examQuestionsText}
 
-HUU NDIO MWONGOZO WA USAHIHISHI NA FOMULA (MARKING SCHEME):
-${markingGuide || "Tumia kanuni na fomula halisi za NECTA Physics."}
+MWONGOZO WA MAJIBU NA FOMULA (MARKING SCHEME):
+${markingGuide || "Tumia kanuni, fomula na njia sahihi za Fizikia za NECTA."}
 
-JUMLA YA ALAMA ZA MTIHANI HUU: ${totalMarks}
+JUMLA YA ALAMA: ${totalMarks}
 
-MAELEKEZO MUHIMU YA KUSAHIHISHA:
-1. Hatua ya Kwanza - UCHUNGUZI WA PICHA:
-   - Ikiwa picha NI DAFTARI LA MWANAFUNZI LENYE HESABU/FIZIKIA:
-     Soma maandishi ya mkononi, fomula, hatua za hesabu, na majibu ya mwisho. Mpe alama (marks) anazostahili kwa kila swali.
-   - Ikiwa picha SIYO DAFTARI LA FIZIKIA (kwa mfano: picha ya viatu, nguo, gari, chumba, mtu/selfie, vitu visivyohusika, picha tupu/giza, au kazi isiyohusiana kabisa na mtihani huu):
-     LAZIMA utoe totalScore = 0, percentage = 0, na uandike maoni ya ualimu yanayoeleza wazi kuwa picha iliyopakiwa siyo ukurasa wa daftari lenye maswali ya Fizikia hivyo apige picha sahihi ya daftari lake.
-2. Usitaje neno lolote la AI, mwanafunzi ajue umemsahihishia wewe mwenyewe Mwl. Richard Lomayan.
-3. Jibu LAZIMA liwe JSON HALISI (VALID JSON ONLY) ndani ya \`\`\`json ... \`\`\` bila maelezo mengine ya ziada nje ya JSON:
+MAELEKEZO YA KUSAHIHISHA:
+1. Soma maandishi ya mkononi (handwritten workings) kwenye picha ya daftari la mwanafunzi.
+2. Sahihisha swali kwa swali:
+   - Angalia fomula alizotumia
+   - Angalia njia na hatua za hesabu (calculation steps)
+   - Angalia jibu la mwisho na vitengo vya SI (units)
+   - Mpe alama (marks) anazostahili kulingana na usahihi wake
+3. Andika maoni ya kirafiki ya kuelimisha ya ualimu wa Kitanzania kwa Kiswahili (bila kutaja neno AI).
+4. TOA JIBU LAKO KAMA JSON TU KATIKA MUUNDO HUU:
 \`\`\`json
 {
-  "totalScore": 0,
+  "totalScore": 42,
   "maxScore": ${totalMarks},
-  "percentage": 0,
-  "overallTeacherComment": "Maoni ya Mwl. Richard Lomayan kwa Kiswahili...",
+  "percentage": 84,
+  "overallTeacherComment": "Kazi nzuri sana ${studentName}! Umeonyesha uelewa mzuri wa fomula na hesabu...",
   "questionEvaluations": [
     {
       "questionNumber": 1,
-      "questionSummary": "Kichwa cha swali",
-      "marksEarned": 0,
+      "questionSummary": "Muhtasari wa swali",
+      "marksEarned": 10,
       "maxMarks": 10,
-      "isCorrect": false,
-      "studentWorkingObserved": "Ulichokiona kwenye daftari la mwanafunzi",
-      "teacherFeedback": "Ushauri au masahihisho kwa mwanafunzi",
+      "isCorrect": true,
+      "studentWorkingObserved": "Hatua na fomula zilizopo kwenye daftari",
+      "teacherFeedback": "Maoni ya ualimu kwa mwanafunzi kuhusu swali hili",
       "idealSolution": "Fomula na jibu sahihi"
     }
   ]
 }
 \`\`\``;
 
-      const contentParts = [
-        { type: "text", text: promptText }
-      ];
+    const contentParts = [
+      { type: "text", text: promptText }
+    ];
 
-      if (Array.isArray(studentPhotos)) {
-        studentPhotos.forEach((photoBase64) => {
-          if (photoBase64 && typeof photoBase64 === 'string') {
-            contentParts.push({
-              type: "image_url",
-              image_url: {
-                url: photoBase64.startsWith('data:') ? photoBase64 : `data:image/jpeg;base64,${photoBase64}`
-              }
-            });
-          }
-        });
-      }
-
-      const response = await fetch("https://api.deepseek.com/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${deepseekKey}`
-        },
-        body: JSON.stringify({
-          model: "deepseek-v4-flash-vision-exp",
-          messages: [
-            {
-              role: "user",
-              content: contentParts
+    if (Array.isArray(studentPhotos)) {
+      studentPhotos.forEach((photoBase64) => {
+        if (photoBase64 && typeof photoBase64 === 'string') {
+          contentParts.push({
+            type: "image_url",
+            image_url: {
+              url: photoBase64.startsWith('data:') ? photoBase64 : `data:image/jpeg;base64,${photoBase64}`
             }
-          ],
-          temperature: 0.1
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.choices && data.choices[0]?.message?.content) {
-        const rawContent = data.choices[0].message.content.trim();
-        const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, rawContent];
-        try {
-          const parsed = JSON.parse(jsonMatch[1] || rawContent);
-          const computedTotal = Number(parsed.totalScore) || 0;
-          const maxPossible = Number(parsed.maxScore) || totalMarks;
-          const computedPercentage = typeof parsed.percentage === 'number' 
-            ? parsed.percentage 
-            : Math.round((computedTotal / maxPossible) * 100);
-
-          console.log(`[DeepSeek Vision] Usahihishaji umekamilika! Alama: ${computedPercentage}% (${computedTotal}/${maxPossible})`);
-          return {
-            success: true,
-            totalScore: computedTotal,
-            maxScore: maxPossible,
-            percentage: computedPercentage,
-            overallTeacherComment: parsed.overallTeacherComment || `Kazi ya ${studentName} imesahihishwa.`,
-            questionEvaluations: Array.isArray(parsed.questionEvaluations) ? parsed.questionEvaluations : []
-          };
-        } catch (parseErr) {
-          console.warn("[DeepSeek Vision] Response haikuwa JSON safi, inatengeneza muhtasari:", parseErr.message);
-          return {
-            success: true,
-            totalScore: 0,
-            maxScore: totalMarks,
-            percentage: 0,
-            overallTeacherComment: rawContent.substring(0, 500),
-            questionEvaluations: [
-              {
-                questionNumber: 1,
-                questionSummary: "Uhakiki wa Picha",
-                marksEarned: 0,
-                maxMarks: totalMarks,
-                isCorrect: false,
-                studentWorkingObserved: "Picha haikidhi vigezo vya daftari la mtihani wa Fizikia.",
-                teacherFeedback: rawContent.substring(0, 300),
-                idealSolution: "Tafadhali piga picha safi na sahihi ya daftari lako."
-              }
-            ]
-          };
+          });
         }
-      } else {
-        console.warn("[DeepSeek Vision] Response haikuwa na content au kosa:", data);
-      }
-    } catch (err) {
-      console.error("[DeepSeek Vision] Error wakati wa kuwasiliana na API:", err);
+      });
     }
-  } else {
-    console.warn("[DeepSeek Vision] Hakuna DEEPSEEK_API_KEY iliyosanidiwa!");
-  }
 
-  // If DeepSeek was unreachable or key missing, return honest 0-score failure, NOT fake 80% pass!
-  return {
-    success: true,
-    totalScore: 0,
-    maxScore: totalMarks,
-    percentage: 0,
-    overallTeacherComment: `Samahani ${studentName}, picha yako haikuweza kuthibitishwa na kusahihishwa. Tafadhali hakikisha umepakia picha wazi ya daftari lako lenye majibu ya Fizikia na uwasilishe tena.`,
-    questionEvaluations: [
-      {
-        questionNumber: 1,
-        questionSummary: "Uthibitisho wa Karatasi",
-        marksEarned: 0,
-        maxMarks: totalMarks,
-        isCorrect: false,
-        studentWorkingObserved: "Hakuna majibu yaliyoweza kusomeka.",
-        teacherFeedback: "Tafadhali piga picha wazi na iliyonyooka ya ukurasa wa daftari lako.",
-        idealSolution: "Tumia mwongozo wa mwalimu kufanya maswali haya."
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${deepseekKey}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-v4-flash-vision-exp",
+        messages: [
+          {
+            role: "user",
+            content: contentParts
+          }
+        ],
+        temperature: 0.2
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.choices && data.choices[0]?.message?.content) {
+      const rawContent = data.choices[0].message.content.trim();
+      const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, rawContent];
+      
+      try {
+        const parsed = JSON.parse(jsonMatch[1] || rawContent);
+        const computedTotal = Number(parsed.totalScore) ?? 0;
+        const maxPossible = Number(parsed.maxScore) || totalMarks;
+        const computedPercentage = typeof parsed.percentage === 'number' 
+          ? parsed.percentage 
+          : Math.round((computedTotal / maxPossible) * 100);
+
+        console.log(`[DeepSeek Vision] ✅ Usahihishaji umekamilika! Alama: ${computedPercentage}% (${computedTotal}/${maxPossible})`);
+        return {
+          success: true,
+          totalScore: computedTotal,
+          maxScore: maxPossible,
+          percentage: computedPercentage,
+          overallTeacherComment: parsed.overallTeacherComment || `Kazi ya ${studentName} imesahihishwa.`,
+          questionEvaluations: Array.isArray(parsed.questionEvaluations) ? parsed.questionEvaluations : []
+        };
+      } catch (parseErr) {
+        console.warn("[DeepSeek Vision] Formatting raw AI response:", parseErr.message);
+        return {
+          success: true,
+          totalScore: 0,
+          maxScore: totalMarks,
+          percentage: 0,
+          overallTeacherComment: rawContent.replace(/```json|```/g, '').trim(),
+          questionEvaluations: [
+            {
+              questionNumber: 1,
+              questionSummary: "Masahihisho ya Kazi",
+              marksEarned: 0,
+              maxMarks: totalMarks,
+              isCorrect: false,
+              studentWorkingObserved: "Tathmini ya picha imekamilika.",
+              teacherFeedback: rawContent.substring(0, 300),
+              idealSolution: "Tafadhali hakikisha unapiga picha wazi ya daftari lako."
+            }
+          ]
+        };
       }
-    ]
-  };
+    } else {
+      console.error("[DeepSeek Vision] API error:", data);
+      throw new Error(data.error?.message || "Hitilafu wakati wa kusoma picha kutoka DeepSeek Vision");
+    }
+  } catch (err) {
+    console.error("[DeepSeek Vision] Error:", err.message);
+    throw err;
+  }
 }
 
 // ================= API ENDPOINTS (POSTGRESQL-BACKED) =================
