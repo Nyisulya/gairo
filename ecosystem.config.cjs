@@ -3,13 +3,13 @@ module.exports = {
     {
       name: "gairo-shulelink",
       script: "server.js",
-      instances: "max", // au 1 kwa VPS ndogo (1GB RAM)
-      exec_mode: "cluster",
+      instances: 1,
+      exec_mode: "fork",
       watch: false,
       max_memory_restart: "800M",
       env: {
         NODE_ENV: "production",
-        PORT: 5000
+        PORT: process.env.PORT || 8018
       }
     }
   ]
