@@ -1,16 +1,32 @@
 import 'dotenv/config';
 import pg from 'pg';
 
-const pool = new pg.Pool({
-  user: process.env.PGUSER || 'postgres',
-  host: process.env.PGHOST || 'localhost',
-  password: process.env.PGPASSWORD || 'nyisu',
-  port: parseInt(process.env.PGPORT || '5432'),
-  database: process.env.PGDATABASE || 'gairo',
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+const isProduction = process.env.NODE_ENV === 'production';
+const useSSL = process.env.PGSSL === 'true' || 
+               process.env.PGSSLMODE === 'require' || 
+               (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require'));
+
+const poolConfig = (process.env.DATABASE_URL || process.env.POSTGRES_URL)
+  ? {
+      connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
+      ssl: useSSL ? { rejectUnauthorized: false } : undefined,
+      max: parseInt(process.env.PGMAX || '20'),
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+    }
+  : {
+      user: process.env.PGUSER || 'gairo_user',
+      host: process.env.PGHOST || 'localhost',
+      password: process.env.PGPASSWORD || 'GairoSec2026!',
+      port: parseInt(process.env.PGPORT || '5432'),
+      database: process.env.PGDATABASE || 'gairo',
+      ssl: useSSL ? { rejectUnauthorized: false } : undefined,
+      max: parseInt(process.env.PGMAX || '20'),
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+    };
+
+const pool = new pg.Pool(poolConfig);
 
 pool.on('error', (err) => {
   console.error('[PostgreSQL Error]', err);
@@ -45,11 +61,6 @@ export async function initDB(initialSettings, initialAssignments) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      ALTER TABLE assignments ADD COLUMN IF NOT EXISTS instructions TEXT;
-      ALTER TABLE assignments ADD COLUMN IF NOT EXISTS pass_mark INTEGER DEFAULT 50;
-      ALTER TABLE assignments ADD COLUMN IF NOT EXISTS submission_count INTEGER DEFAULT 0;
-      ALTER TABLE assignments ADD COLUMN IF NOT EXISTS school_name VARCHAR(150) DEFAULT 'Gairo Secondary School';
-
       CREATE TABLE IF NOT EXISTS submissions (
         id VARCHAR(100) PRIMARY KEY,
         assignment_id VARCHAR(100),
@@ -75,11 +86,6 @@ export async function initDB(initialSettings, initialAssignments) {
         question_evaluations JSONB DEFAULT '[]',
         marked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-
-      ALTER TABLE submissions ADD COLUMN IF NOT EXISTS assignment_title VARCHAR(255);
-      ALTER TABLE submissions ADD COLUMN IF NOT EXISTS subject VARCHAR(100) DEFAULT 'Physics';
-      ALTER TABLE submissions ADD COLUMN IF NOT EXISTS school_name VARCHAR(150) DEFAULT 'Gairo Secondary School';
-      ALTER TABLE submissions ADD COLUMN IF NOT EXISTS teacher_name VARCHAR(100) DEFAULT 'Mwl. Richard Lomayan';
     `);
 
     // Check settings
@@ -361,3 +367,13 @@ export async function getAnalytics() {
     recentSubmissions: recentRes.rows
   };
 }
+
+export async function closeDB() {
+  try {
+    await pool.end();
+    console.log('[PostgreSQL] Database pool closed gracefully.');
+  } catch (err) {
+    console.error('[PostgreSQL] Error closing pool:', err);
+  }
+}
+

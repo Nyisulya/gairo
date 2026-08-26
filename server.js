@@ -574,8 +574,34 @@ if (fs.existsSync(distPath)) {
     if (req.path.startsWith('/api')) return next();
     res.sendFile(path.join(distPath, 'index.html'));
   });
+} else {
+  app.get('/', (req, res) => {
+    res.send(`
+      <div style="font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; text-align: center;">
+        <h2 style="color: #0284c7;">🎓 ShuleLink - Gairo Secondary School</h2>
+        <p>API Server ipo hewani kikamilifu kwenye Port ${PORT}!</p>
+        <p style="background: #f1f5f9; padding: 12px; border-radius: 6px; font-family: monospace;">
+          Ili kuona UI ya mfumo kwenye browser, tafadhali endesha <code>npm run build</code> kwenye VPS.
+        </p>
+      </div>
+    `);
+  });
 }
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`[ShuleLink Server] Inafanya kazi kwenye port ${PORT} - Gairo Secondary School (Database: PostgreSQL 'gairo', Engine: DeepSeek Vision)`);
 });
+
+// Graceful Shutdown for PM2 & Docker
+async function handleShutdown(signal) {
+  console.log(`[ShuleLink Server] Imepokea ${signal}. Inafunga seva na PostgreSQL pool...`);
+  server.close(async () => {
+    await db.closeDB();
+    console.log('[ShuleLink Server] Seva imefungwa salama.');
+    process.exit(0);
+  });
+}
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+
