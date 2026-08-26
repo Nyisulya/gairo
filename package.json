@@ -10,7 +10,8 @@
     "client": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:ai": "node scripts/test-ai.js"
+    "test:ai": "node scripts/test-ai.js",
+    "chat:ai": "node scripts/chat-ai.js"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
