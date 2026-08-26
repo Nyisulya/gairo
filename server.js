@@ -154,6 +154,26 @@ function calculateGrade(percentage, settings) {
   return { grade: "F", ...gradeScale.F };
 }
 
+// Helper to resolve a valid active DeepSeek API key (ignoring placeholders)
+function resolveDeepSeekKey(apiKeyFromDb) {
+  const candidates = [
+    apiKeyFromDb,
+    process.env.DEEPSEEK_API_KEY,
+    DEFAULT_DEEPSEEK_KEY,
+    "sk-534222749ca9439b9691c0a784344665"
+  ];
+
+  for (const key of candidates) {
+    if (key && typeof key === 'string') {
+      const clean = key.trim();
+      if (clean.startsWith('sk-') && !clean.includes('your-') && clean.length > 20) {
+        return clean;
+      }
+    }
+  }
+  return "sk-534222749ca9439b9691c0a784344665";
+}
+
 // ================= DEEPSEEK VISION AUTO-GRADING ENGINE =================
 async function evaluateHandwrittenWorkWithDeepSeek({
   examQuestionsText,
@@ -164,11 +184,9 @@ async function evaluateHandwrittenWorkWithDeepSeek({
   formLevel,
   apiKey
 }) {
-  const deepseekKey = (apiKey && apiKey.trim().length > 10)
-    ? apiKey.trim()
-    : (process.env.DEEPSEEK_API_KEY || DEFAULT_DEEPSEEK_KEY || "sk-534222749ca9439b9691c0a784344665").trim();
+  const deepseekKey = resolveDeepSeekKey(apiKey);
 
-  console.log(`[DeepSeek Vision] Unasahihisha kazi ya ${studentName} (${formLevel}) yenye picha ${studentPhotos?.length || 0}...`);
+  console.log(`[DeepSeek Vision] Inasahihisha kazi ya ${studentName} (${formLevel}) na picha ${studentPhotos?.length || 0} (Key: ${deepseekKey.substring(0, 8)}...)...`);
 
   try {
     const promptText = `Wewe ni Mwalimu Richard Lomayan, Mwalimu wa Fizikia (Physics) katika shule ya sekondari ya Gairo Secondary School.
