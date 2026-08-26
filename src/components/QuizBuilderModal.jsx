@@ -91,22 +91,6 @@ export default function QuizBuilderModal({
     }
   };
 
-  const handleQuickTemplate = () => {
-    setTitle('Physics Form 2 Holiday Challenge: Electricity & Magnetism');
-    setFormLevel('Form 2');
-    setQuestionsText(`GAIRO SECONDARY SCHOOL - PHYSICS FORM 2
-KAZI YA LIKIZO YA FIZIKIA
-
-1. Betri ya volteji 24 V imeunganishwa na ukinzani wa 8 Ω. Kokotoa mkondo wa umeme (Current - I). [Alama 10]
-2. Vipingamizi viwili vya 4 Ω na 6 Ω vimeunganishwa sambamba. Tafuta ukinzani wa jumla (Equivalent Resistance). [Alama 15]
-3. Mashine ina VR = 5. Mzigo wa 800 N unanyanyuliwa kwa nguvu ya 200 N. Tafuta MA na Ufanisi (Efficiency %). [Alama 15]
-4. Taja sifa tatu za mistari ya nguvu ya sumaku (Magnetic Field Lines). [Alama 10]`);
-    setMarkingGuide(`1. I = V / R = 24 / 8 = 3.0 A.
-2. 1/Rp = 1/4 + 1/6 = 5/12 => Rp = 2.4 Ω.
-3. MA = 800/200 = 4; Efficiency = (4/5) * 100% = 80%.
-4. Huanzia North kwenda South; Hazikatani; Nguvu kubwa penye msongamano.`);
-  };
-
   const handleSave = (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -148,17 +132,6 @@ KAZI YA LIKIZO YA FIZIKIA
           </div>
           <button type="button" className="btn-close-modal" onClick={onClose}>
             <X size={22} />
-          </button>
-        </div>
-
-        {/* Quick Template */}
-        <div className="quick-templates-bar">
-          <span className="template-label">
-            <Sparkles size={16} />
-            Mwalimu:
-          </span>
-          <button type="button" className="template-pill-btn" onClick={handleQuickTemplate}>
-            ⚡ Pakia Mfano wa Maswali ya Haraka ya Fizikia (Form 2)
           </button>
         </div>
 
