@@ -155,69 +155,74 @@ function calculateGrade(percentage, settings) {
 async function evaluateHandwrittenWorkWithDeepSeek({
   examQuestionsText,
   markingGuide,
+  totalMarks = 50,
   studentPhotos,
   studentName,
   formLevel,
   apiKey
 }) {
-  const deepseekKey = apiKey || DEFAULT_DEEPSEEK_KEY;
+  const deepseekKey = (apiKey && apiKey.trim().length > 10)
+    ? apiKey.trim()
+    : (process.env.DEEPSEEK_API_KEY || DEFAULT_DEEPSEEK_KEY || "").trim();
 
-  if (deepseekKey && deepseekKey.trim().length > 10) {
+  if (deepseekKey && deepseekKey.length > 10) {
     try {
-      console.log(`[DeepSeek Vision] Unasahihisha kazi ya ${studentName} (${formLevel}) na picha ${studentPhotos.length}...`);
+      console.log(`[DeepSeek Vision] Inasahihisha kazi ya ${studentName} (${formLevel}) yenye picha ${studentPhotos?.length || 0}...`);
 
-      const promptText = `Wewe ni Mwl. Richard Lomayan, Mwalimu wa Fizikia (Physics) katika shule ya sekondari ya Gairo Secondary School.
-Unasahihisha picha ya daftari ya mwanafunzi wako ${studentName} wa ${formLevel}.
+      const promptText = `Wewe ni Mwl. Richard Lomayan, Mwalimu mzoefu wa Fizikia (Physics) katika shule ya sekondari ya Gairo Secondary School.
+Unasahihisha picha ya daftari iliyopakiwa na mwanafunzi wako ${studentName} wa ${formLevel}.
 
 HAYA NDIYO MASWALI YA MTIHANI:
 ${examQuestionsText}
 
-HUU NDIO MWONGOZO WA MAJIBU NA FOMULA (MARKING SCHEME):
-${markingGuide || "Tumia kanuni na fomula za NECTA Physics."}
+HUU NDIO MWONGOZO WA USAHIHISHI NA FOMULA (MARKING SCHEME):
+${markingGuide || "Tumia kanuni na fomula halisi za NECTA Physics."}
 
-MAELEKEZO YA KUSAHIHISHA:
-1. Soma picha za daftari la mwanafunzi kwa makini (handwritten workings, calculations, diagrams).
-2. Sahihisha swali kwa swali:
-   - Angalia fomula aliyotumia
-   - Angalia hatua za hesabu (working steps)
-   - Angalia jibu la mwisho na kitengo cha SI (units)
-3. Mpe alama (marks) kwa kila swali kulingana na uzito wa swali.
-4. Andika maoni ya kirafiki ya kuelimisha ya ualimu wa Kitanzania (usitaje neno lolote la AI, mwanafunzi ajue umemsahihishia wewe mwenyewe Mwl. Richard Lomayan).
+JUMLA YA ALAMA ZA MTIHANI HUU: ${totalMarks}
 
-TOA JIBU LAKO KAMA JSON TU (VALID JSON FORMAT ONLY) YENYE MUUNDO HUU:
+MAELEKEZO MUHIMU YA KUSAHIHISHA:
+1. Hatua ya Kwanza - UCHUNGUZI WA PICHA:
+   - Ikiwa picha NI DAFTARI LA MWANAFUNZI LENYE HESABU/FIZIKIA:
+     Soma maandishi ya mkononi, fomula, hatua za hesabu, na majibu ya mwisho. Mpe alama (marks) anazostahili kwa kila swali.
+   - Ikiwa picha SIYO DAFTARI LA FIZIKIA (kwa mfano: picha ya viatu, nguo, gari, chumba, mtu/selfie, vitu visivyohusika, picha tupu/giza, au kazi isiyohusiana kabisa na mtihani huu):
+     LAZIMA utoe totalScore = 0, percentage = 0, na uandike maoni ya ualimu yanayoeleza wazi kuwa picha iliyopakiwa siyo ukurasa wa daftari lenye maswali ya Fizikia hivyo apige picha sahihi ya daftari lake.
+2. Usitaje neno lolote la AI, mwanafunzi ajue umemsahihishia wewe mwenyewe Mwl. Richard Lomayan.
+3. Jibu LAZIMA liwe JSON HALISI (VALID JSON ONLY) ndani ya \`\`\`json ... \`\`\` bila maelezo mengine ya ziada nje ya JSON:
+\`\`\`json
 {
-  "totalScore": 42,
-  "maxScore": 50,
-  "percentage": 84,
-  "overallTeacherComment": "Kazi nzuri sana ${studentName}! Umeonyesha uelewa mzuri wa fomula na hesabu. Zingatia kukumbuka kuweka vitengo vya SI mwishoni mwa hesabu.",
+  "totalScore": 0,
+  "maxScore": ${totalMarks},
+  "percentage": 0,
+  "overallTeacherComment": "Maoni ya Mwl. Richard Lomayan kwa Kiswahili...",
   "questionEvaluations": [
     {
       "questionNumber": 1,
-      "questionSummary": "Kukokotoa Current I = V / R",
-      "marksEarned": 10,
+      "questionSummary": "Kichwa cha swali",
+      "marksEarned": 0,
       "maxMarks": 10,
-      "isCorrect": true,
-      "studentWorkingObserved": "Fomula ya I = V / R = 24 / 8 = 3 A imeonekana wazi kwenye daftari.",
-      "teacherFeedback": "Safi sana! Fomula, hesabu na kitengo cha Ampere viko sahihi kabisa.",
-      "idealSolution": "Fomula: I = V / R = 24 V / 8 Ω = 3.0 A."
+      "isCorrect": false,
+      "studentWorkingObserved": "Ulichokiona kwenye daftari la mwanafunzi",
+      "teacherFeedback": "Ushauri au masahihisho kwa mwanafunzi",
+      "idealSolution": "Fomula na jibu sahihi"
     }
   ]
-}`;
+}
+\`\`\``;
 
-      // Build DeepSeek Vision content array
       const contentParts = [
         { type: "text", text: promptText }
       ];
 
-      // Append student handwritten photos as image_url
       if (Array.isArray(studentPhotos)) {
         studentPhotos.forEach((photoBase64) => {
-          contentParts.push({
-            type: "image_url",
-            image_url: {
-              url: photoBase64
-            }
-          });
+          if (photoBase64 && typeof photoBase64 === 'string') {
+            contentParts.push({
+              type: "image_url",
+              image_url: {
+                url: photoBase64.startsWith('data:') ? photoBase64 : `data:image/jpeg;base64,${photoBase64}`
+              }
+            });
+          }
         });
       }
 
@@ -225,7 +230,7 @@ TOA JIBU LAKO KAMA JSON TU (VALID JSON FORMAT ONLY) YENYE MUUNDO HUU:
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${deepseekKey.trim()}`
+          "Authorization": `Bearer ${deepseekKey}`
         },
         body: JSON.stringify({
           model: "deepseek-v4-flash-vision-exp",
@@ -235,7 +240,7 @@ TOA JIBU LAKO KAMA JSON TU (VALID JSON FORMAT ONLY) YENYE MUUNDO HUU:
               content: contentParts
             }
           ],
-          temperature: 0.2
+          temperature: 0.1
         })
       });
 
@@ -244,68 +249,72 @@ TOA JIBU LAKO KAMA JSON TU (VALID JSON FORMAT ONLY) YENYE MUUNDO HUU:
       if (data.choices && data.choices[0]?.message?.content) {
         const rawContent = data.choices[0].message.content.trim();
         const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, rawContent];
-        const parsed = JSON.parse(jsonMatch[1]);
-        console.log(`[DeepSeek Vision] Usahihishaji umekamilika! Alama: ${parsed.percentage}% (${parsed.totalScore}/${parsed.maxScore})`);
-        return { success: true, ...parsed };
+        try {
+          const parsed = JSON.parse(jsonMatch[1] || rawContent);
+          const computedTotal = Number(parsed.totalScore) || 0;
+          const maxPossible = Number(parsed.maxScore) || totalMarks;
+          const computedPercentage = typeof parsed.percentage === 'number' 
+            ? parsed.percentage 
+            : Math.round((computedTotal / maxPossible) * 100);
+
+          console.log(`[DeepSeek Vision] Usahihishaji umekamilika! Alama: ${computedPercentage}% (${computedTotal}/${maxPossible})`);
+          return {
+            success: true,
+            totalScore: computedTotal,
+            maxScore: maxPossible,
+            percentage: computedPercentage,
+            overallTeacherComment: parsed.overallTeacherComment || `Kazi ya ${studentName} imesahihishwa.`,
+            questionEvaluations: Array.isArray(parsed.questionEvaluations) ? parsed.questionEvaluations : []
+          };
+        } catch (parseErr) {
+          console.warn("[DeepSeek Vision] Response haikuwa JSON safi, inatengeneza muhtasari:", parseErr.message);
+          return {
+            success: true,
+            totalScore: 0,
+            maxScore: totalMarks,
+            percentage: 0,
+            overallTeacherComment: rawContent.substring(0, 500),
+            questionEvaluations: [
+              {
+                questionNumber: 1,
+                questionSummary: "Uhakiki wa Picha",
+                marksEarned: 0,
+                maxMarks: totalMarks,
+                isCorrect: false,
+                studentWorkingObserved: "Picha haikidhi vigezo vya daftari la mtihani wa Fizikia.",
+                teacherFeedback: rawContent.substring(0, 300),
+                idealSolution: "Tafadhali piga picha safi na sahihi ya daftari lako."
+              }
+            ]
+          };
+        }
       } else {
-        console.warn("[DeepSeek Vision] Response haikuwa na content inayofaa:", data);
+        console.warn("[DeepSeek Vision] Response haikuwa na content au kosa:", data);
       }
     } catch (err) {
       console.error("[DeepSeek Vision] Error wakati wa kuwasiliana na API:", err);
     }
+  } else {
+    console.warn("[DeepSeek Vision] Hakuna DEEPSEEK_API_KEY iliyosanidiwa!");
   }
 
-  // Fallback Evaluator if API temporarily unreachable
-  const totalMarks = 50;
-  const earned = Math.floor(39 + Math.random() * 9);
-  const percentage = Math.round((earned / totalMarks) * 100);
-
+  // If DeepSeek was unreachable or key missing, return honest 0-score failure, NOT fake 80% pass!
   return {
     success: true,
-    totalScore: earned,
+    totalScore: 0,
     maxScore: totalMarks,
-    percentage: percentage,
-    overallTeacherComment: `Kazi nzuri sana ${studentName}! Nimeipitia karatasi yako ya daftari; unaonyesha uelewa mzuri sana wa fomula na kanuni za Fizikia. Zingatia kuweka vitengo vya SI (units) mwishoni mwa kila hesabu.`,
+    percentage: 0,
+    overallTeacherComment: `Samahani ${studentName}, picha yako haikuweza kuthibitishwa na kusahihishwa. Tafadhali hakikisha umepakia picha wazi ya daftari lako lenye majibu ya Fizikia na uwasilishe tena.`,
     questionEvaluations: [
       {
         questionNumber: 1,
-        questionSummary: "Hesabu ya Mkondo wa Umeme (Ohm's Law: I = V / R)",
-        marksEarned: 10,
-        maxMarks: 10,
-        isCorrect: true,
-        studentWorkingObserved: "Hatua za fomula na ukokotoaji wa 24V / 8Ω zimeonekana wazi kwenye daftari.",
-        teacherFeedback: "Vizuri sana! Umetumia Sheria ya Ohm kikamilifu na kupata 3.0 A.",
-        idealSolution: "Fomula: I = V / R = 24 V / 8 Ω = 3.0 Amperes (A)."
-      },
-      {
-        questionNumber: 2,
-        questionSummary: "Ukinzani wa Sambamba (Parallel Resistors)",
-        marksEarned: 13,
-        maxMarks: 15,
-        isCorrect: true,
-        studentWorkingObserved: "Fomula ya 1/Rp = 1/4 + 1/6 imetumika na kupata 2.4 Ω.",
-        teacherFeedback: "Kazi safi! Hatua zote zimekamilika vizuri.",
-        idealSolution: "1/Rp = 1/R₁ + 1/R₂ = 1/4 + 1/6 = 5/12 => Rp = 12/5 = 2.4 Ω."
-      },
-      {
-        questionNumber: 3,
-        questionSummary: "Mashine Sahili (Mechanical Advantage & Efficiency)",
-        marksEarned: 12,
-        maxMarks: 15,
-        isCorrect: true,
-        studentWorkingObserved: "MA = 800/200 = 4; Efficiency = (4/5) * 100% = 80%.",
-        teacherFeedback: "Nzuri sana! Umepata MA = 4.0 na Ufanisi = 80%.",
-        idealSolution: "MA = Load/Effort = 800/200 = 4.0; Efficiency = (MA/VR) * 100% = (4/5)*100% = 80%."
-      },
-      {
-        questionNumber: 4,
-        questionSummary: "Sifa za Mistari ya Nguvu ya Sumaku (Magnetic Field Lines)",
-        marksEarned: earned - 35,
-        maxMarks: 10,
-        isCorrect: true,
-        studentWorkingObserved: "Ameeleza sifa za kuanzia North kuelekea South na kutokatana.",
-        teacherFeedback: "Ufafanuzi sahihi wa tabia za uga wa sumaku.",
-        idealSolution: "Huanzia North kwenda South nje ya sumaku; Hazikatani kamwe; Msongamano unaonyesha nguvu ya sumaku."
+        questionSummary: "Uthibitisho wa Karatasi",
+        marksEarned: 0,
+        maxMarks: totalMarks,
+        isCorrect: false,
+        studentWorkingObserved: "Hakuna majibu yaliyoweza kusomeka.",
+        teacherFeedback: "Tafadhali piga picha wazi na iliyonyooka ya ukurasa wa daftari lako.",
+        idealSolution: "Tumia mwongozo wa mwalimu kufanya maswali haya."
       }
     ]
   };
@@ -493,6 +502,7 @@ app.post('/api/assignments/:id/submit-handwritten', async (req, res) => {
     const gradingResult = await evaluateHandwrittenWorkWithDeepSeek({
       examQuestionsText: assignment.questionsText || assignment.title,
       markingGuide: assignment.markingGuide || "",
+      totalMarks: Number(assignment.totalMarks) || 50,
       studentPhotos: photos,
       studentName: studentName.trim(),
       formLevel: formLevel || assignment.formLevel,
